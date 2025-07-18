@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Web App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="{{ url_for('weights') }}">Poids</a></li>
+                <li><a href="{{ url_for('profiles') }}">Profiles</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- This is where each page's specific content will go -->
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        <p>© 2025 Malaxometer app</p>
+    </footer>
+</body>
+</html>

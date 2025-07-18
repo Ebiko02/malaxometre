@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2 style="font-size:2.5em;">Poids</h2>
+    <form method="post" action="{{ url_for('tare_all') }}" style="display:inline;">
+        <button type="submit">Tare</button>
+    </form>
+    <form method="post" action="{{ url_for('weights') }}" style="display:inline;">
+        <button type="submit">Rafraichir le poids</button>
+    </form>
+    <div style="font-size:2em; margin: 20px;">
+        {% if global_weight is not none %}
+            {{ global_weight }} kg
+        {% else %}
+            Error reading sensors
+        {% endif %}
+    </div>
+{% endblock %}

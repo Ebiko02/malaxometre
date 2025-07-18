@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div style="max-width:600px; margin:40px auto; background:#fff; border-radius:12px; box-shadow:0 2px 8px #0001; padding:32px;">
+        <h1 style="color:#007bff;">Bienvenue sur le malaxomètre</h1>
+        <p style="font-size:1.2em; margin-top:24px;">
+        Cette application web vous permet de mesurer le poids de matière ajoutée, et de contrôler le malaxage en utilisant trois profils prédéfinis.:
+        </p>
+        <ul style="text-align:left; font-size:1.1em; margin:24px auto 32px auto; max-width:500px;">
+            <li>Visualiser le <b>poids de matière ajoutée</b> mesuré par les pieds du malaxomètre</li>
+            <li>Controler le <b>moteur</b> afin de malaxer la matière en utilisant trois profils prédéfinis.</li>
+        </ul>
+        <p style="color:#555;">
+            Vous pouvez naviguer vers les pages <a href="{{ url_for('weights') }}">Poids</a> et <a href="{{ url_for('profiles') }}">Profils</a> pour interagir avec l'application.
+        </p>
+    </div>
+{% endblock %}

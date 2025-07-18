@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Motor Control</h2>
+    <form method="post" action="{{ url_for('motor_control', profile='profile1') }}">
+        <button type="submit">Profile 1</button>
+    </form>
+    <form method="post" action="{{ url_for('motor_control', profile='profile2') }}">
+        <button type="submit">Profile 2</button>
+    </form>
+    <form method="post" action="{{ url_for('motor_control', profile='profile3') }}">
+        <button type="submit">Profile 3</button>
+    </form>
+{% endblock %}
