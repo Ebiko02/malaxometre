@@ -1,10 +1,104 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <title>Flask Web App</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+      /* Touch-friendly base variables */
+      :root{
+        --touch-padding-vertical: 14px;
+        --touch-padding-horizontal: 18px;
+        --touch-radius: 12px;
+        --touch-font-size: 18px;
+        --control-min-height: 48px;
+        --card-gap: 18px;
+      }
+
+      html,body{
+        -webkit-font-smoothing:antialiased;
+        -moz-osx-font-smoothing:grayscale;
+        font-size:16px;
+        touch-action: manipulation; /* improve responsiveness on mobile */
+      }
+
+      /* Buttons */
+      .big_button{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        padding:var(--touch-padding-vertical) var(--touch-padding-horizontal);
+        min-height:var(--control-min-height);
+        font-size:var(--touch-font-size);
+        border-radius:var(--touch-radius);
+        border:0;
+        cursor:pointer;
+        -webkit-tap-highlight-color: rgba(0,0,0,0.12);
+        user-select:none;
+      }
+      .big_button.small{ padding:10px 14px; font-size:15px; min-height:44px; border-radius:10px; }
+
+      /* Links that act as buttons */
+      .small_link, .link-button{
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:10px 12px;
+        min-height:44px;
+        border-radius:10px;
+        text-decoration:none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0.08);
+      }
+
+      /* Form controls */
+      input[type="number"], input[type="text"], select, textarea {
+        padding:12px 12px;
+        font-size:16px;
+        min-height:44px;
+        border-radius:10px;
+        border:1px solid #d7dbe0;
+        box-sizing:border-box;
+        width:100%;
+        outline-offset:3px;
+      }
+      input:focus, select:focus, textarea:focus {
+        box-shadow:0 4px 18px rgba(11,94,215,0.12);
+        border-color:#0b5ed7;
+      }
+
+      fieldset { padding:12px; margin:12px 0; border-radius:10px; border:1px solid #eef2f7; }
+      legend { font-weight:700; font-size:1rem; padding:0 6px; }
+
+      /* Cards & spacing */
+      .card, .profile-card, .energy-card {
+        padding:18px;
+        border-radius:14px;
+        box-shadow:0 8px 20px rgba(8,20,40,0.06);
+        gap:var(--card-gap);
+      }
+      .profiles-list { gap:18px; }
+
+      /* Make table rows easier to tap */
+      table tbody tr { height:56px; }
+      table td, table th { padding:12px 10px; }
+
+      /* Increase flash message tap area */
+      .flash { padding:12px 14px; border-radius:10px; font-size:15px; }
+
+      /* Accessibility: bigger focus outline for keyboard users */
+      :focus { outline: 3px solid rgba(11,94,215,0.18); outline-offset:2px; }
+
+      /* Remove tiny hit targets on small screens */
+      @media (max-width:640px){
+        :root{ --touch-font-size:17px; --touch-padding-vertical:12px; --touch-padding-horizontal:14px; }
+        .profiles-list{flex-direction:column;}
+        .card, .profile-card{width:100%!important;}
+        .energy-figure { flex-direction:column; gap:10px; }
+      }
+    </style>
 </head>
 <body>
     <header>
@@ -12,7 +106,9 @@
             <ul>
                 <li><a href="/">Home</a></li>
                 <li><a href="{{ url_for('weights') }}">Poids</a></li>
-                <li><a href="{{ url_for('profiles') }}">Profiles</a></li>
+                <li><a href="{{ url_for('profiles') }}">Profils</a></li>
+                <li><a href="{{ url_for('energy') }}">Energie</a></li>
+                <li><a href="{{ url_for('profil_custom') }}">Profil personnalisé</a></li>
             </ul>
         </nav>
     </header>
