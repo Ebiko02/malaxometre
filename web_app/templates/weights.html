@@ -1,18 +1,344 @@
 {% extends 'base.html' %}
-
 {% block content %}
-    <h2 style="font-size:2.5em;">Poids</h2>
-    <form method="post" action="{{ url_for('tare_all') }}" style="display:inline;">
-        <button type="submit">Tare</button>
-    </form>
-    <form method="post" action="{{ url_for('weights') }}" style="display:inline;">
-        <button type="submit">Rafraichir le poids</button>
-    </form>
-    <div style="font-size:2em; margin: 20px;">
-        {% if global_weight is not none %}
-            {{ global_weight }} kg
-        {% else %}
-            Error reading sensors
-        {% endif %}
+<style>
+  :root{
+    --accent:#0b5ed7;
+    --muted:#6b7280;
+    --card-bg:#ffffff;
+    --surface:#f8fafc;
+    --radius:14px;
+    --touch-pad-vert:14px;
+    --touch-pad-horiz:18px;
+  }
+
+  .weights-container{max-width:980px;margin:28px auto;padding:20px;display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}
+  .card{
+    background:var(--card-bg);
+    border-radius:var(--radius);
+    box-shadow:0 10px 30px rgba(8,20,40,0.06);
+    padding:20px;
+    flex:1 1 420px;
+    min-width:280px;
+    border:1px solid rgba(11,94,215,0.04);
+  }
+
+  .header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .title{font-size:1.35rem;font-weight:800;color:#07123b;margin:0}
+  .subtitle{font-size:0.95rem;color:var(--muted);margin:0}
+
+  .controls{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:10px;
+    padding:var(--touch-pad-vert) var(--touch-pad-horiz);
+    border-radius:12px;border:0;cursor:pointer;font-weight:700;font-size:1rem;
+    -webkit-tap-highlight-color: rgba(0,0,0,0.08);
+    min-height:52px;
+  }
+  .btn.primary{background:var(--accent);color:#fff;box-shadow:0 8px 22px rgba(11,94,215,0.12)}
+  .btn.ghost{background:transparent;border:1px solid rgba(11,94,215,0.10);color:var(--accent)}
+  .btn.warn{background:#ffb020;color:#2b1600}
+
+  .weight-display{
+    margin-top:18px;padding:20px;border-radius:12px;background:linear-gradient(180deg,#fff,#f6fbff);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid rgba(11,94,215,0.04)
+  }
+  .weight-value{font-size:4.2rem;font-weight:900;color:var(--accent);line-height:1}
+  .weight-meta{display:flex;gap:10px;align-items:center;margin-top:8px;color:var(--muted);font-weight:700}
+
+  .small-note{margin-top:12px;color:var(--muted);font-size:0.95rem;text-align:center}
+
+  .side-card{flex:0 0 300px;min-height:220px}
+  .side-card .section{margin-bottom:14px}
+  .hist-list{list-style:none;padding:0;margin:8px 0 0 0;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto}
+  .hist-item{background:var(--surface);padding:10px;border-radius:10px;border:1px solid rgba(11,94,215,0.03);display:flex;justify-content:space-between;align-items:center;font-weight:700;color:#0f172a}
+  .hist-time{font-size:0.85rem;color:var(--muted);font-weight:600}
+
+  .flash{margin-top:12px;padding:12px;border-radius:10px;font-weight:700}
+  .flash.success{background:#e6ffed;border:1px solid #d1f6dc;color:#0b9451}
+  .flash.error{background:#fff1f0;border:1px solid #ffd6d8;color:#b32222}
+
+  .water-display {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border: 2px solid #2196f3;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 12px 0;
+    text-align: center;
+  }
+  
+  .water-percentage {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1976d2;
+    margin: 8px 0;
+  }
+  
+  .water-details {
+    font-size: 0.9rem;
+    color: #424242;
+    display: flex;
+    justify-content: space-around;
+    margin-top: 8px;
+  }
+  
+  .btn.water-start { background: #4caf50; color: white; }
+  .btn.water-stop { background: #f44336; color: white; }
+
+  /* Touch targets for small screens */
+  @media (max-width:760px){
+    .weights-container{padding:12px}
+    .side-card{flex-basis:100%}
+    .card{flex-basis:100%}
+    .weight-value{font-size:3.2rem}
+    .btn{min-height:56px;font-size:1.05rem;padding:16px 20px}
+  }
+</style>
+
+<div class="weights-container">
+  <!-- Weight Reading Card -->
+  <div class="card">
+    <div class="header">
+      <h1 class="title">Balance de Précision</h1>
+      <p class="subtitle">Lecture en temps réel du poids</p>
     </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          {% set msg_l = message|lower %}
+          {% set is_current_weight = ('current weight' in msg_l) or ('poids courant' in msg_l) %}
+          {% if not is_current_weight %}
+            <div class="flash {{ 'success' if category in ['success','ok'] else 'error' }}">{{ message }}</div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Water Percentage Display (shown when water mode is active) -->
+    {% if water_data and water_data.water_mode_active and water_data.water_percentage is not none %}
+    <div class="water-display" id="waterDisplay">
+      <div>🌊 <strong>Pourcentage d'eau</strong></div>
+      <div class="water-percentage" id="waterPercentage">{{ water_data.water_percentage }}%</div>
+      <div class="water-details">
+        <span>Poudre: <strong id="powderMass">{{ water_data.powder_mass|round(1) }} g</strong></span>
+        <span>Eau: <strong id="waterMass">{{ water_data.water_mass|round(1) }} g</strong></span>
+        <span>Total: <strong id="totalMass">{{ water_data.current_mass|round(1) }} g</strong></span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Regular Weight Display -->
+    <div class="weight-display" role="status" aria-live="polite" id="weightDisplay">
+      {% if global_weight is defined and global_weight is not none %}
+        <div style="display:flex;gap:12px;align-items:baseline;justify-content:center">
+          <div class="weight-value">{{ '%.1f'|format(global_weight) }}</div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start">
+            <div class="weight-meta"><span class="weight-unit">g</span></div>
+            <div class="hist-time">{{ last_measured_at|default('') }}</div>
+          </div>
+        </div>
+        <div class="small-note">Lecture actuelle — appuyez sur <strong>Rafraîchir le poids</strong> pour mettre à jour.</div>
+      {% else %}
+        <div style="color:#b32222;font-weight:800;font-size:1.05rem">Aucune mesure</div>
+        <div class="small-note">Cliquez sur « Rafraîchir le poids » ou assurez-vous que le capteur est connecté.</div>
+      {% endif %}
+    </div>
+
+    <div class="controls">
+      <!-- Regular weight controls -->
+      <form method="post" action="{{ url_for('weights') }}" style="display:inline">
+        <button type="submit" class="btn primary">Rafraîchir le poids</button>
+      </form>
+      
+      <form method="post" action="{{ url_for('tare') }}" style="display:inline">
+        <button type="submit" class="btn">Tarer</button>
+      </form>
+
+      <!-- Water mode controls -->
+      {% if water_data and water_data.water_mode_active %}
+        <form method="post" action="{{ url_for('toggle_water_mode') }}" style="display:inline">
+          <input type="hidden" name="action" value="stop">
+          <button type="submit" class="btn water-stop">Arrêter mode eau</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url_for('toggle_water_mode') }}" style="display:inline">
+          <input type="hidden" name="action" value="start">
+          <button type="submit" class="btn water-start">Commencer ajout d'eau</button>
+        </form>
+      {% endif %}
+
+      <button onclick="togglePolling(this)" class="btn ghost" id="autoPollBtn" aria-pressed="false">Auto‑poll</button>
+    </div>
+  </div>
+
+  <!-- History Card -->
+  <div class="card">
+    <div class="header">
+      <h2 class="title">Historique</h2>
+      <p class="subtitle">Dernières mesures</p>
+    </div>
+    <ul class="hist-list" id="history">
+      {% if weight_history is defined and weight_history %}
+        {% for item in weight_history %}
+          <li class="hist-item">
+            <span>{{ '%.1f'|format(item.weight) }} g</span>
+            <span class="hist-time">{{ item.at }}</span>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="hist-item" style="justify-content:center;color:var(--muted)">Aucune donnée historique</li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+
+<script>
+/* AJAX auto-poll with water percentage support */
+let pollInterval = null;
+const POLL_MS = Number({{ auto_poll_interval_ms|default(500) }});
+
+// Fetch weight data via AJAX
+async function fetchWeightData() {
+  try {
+    const response = await fetch('{{ url_for("weights") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    const data = await response.json();
+    updateWeightDisplay(data);
+    
+  } catch (error) {
+    console.error('Weight fetch failed:', error);
+    showError('Erreur de lecture du capteur');
+  }
+}
+
+// Update the weight display with new data
+function updateWeightDisplay(data) {
+  const weightDisplay = document.getElementById('weightDisplay');
+  const waterDisplay = document.getElementById('waterDisplay');
+  const historyList = document.getElementById('history');
+  
+  if (data.weight !== null && data.weight !== undefined) {
+    // Update main weight display
+    weightDisplay.innerHTML = `
+      <div style="display:flex;gap:12px;align-items:baseline;justify-content:center">
+        <div class="weight-value">${data.weight.toFixed(1)}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-start">
+          <div class="weight-meta"><span class="weight-unit">g</span></div>
+          <div class="hist-time">${data.timestamp || ''}</div>
+        </div>
+      </div>
+      <div class="small-note">Lecture actuelle — mise à jour automatique.</div>
+    `;
+    
+    // Update water display if water mode is active
+    if (data.water_data && data.water_data.water_mode_active) {
+      if (!waterDisplay) {
+        // Create water display if it doesn't exist
+        const newWaterDisplay = document.createElement('div');
+        newWaterDisplay.className = 'water-display';
+        newWaterDisplay.id = 'waterDisplay';
+        weightDisplay.parentNode.insertBefore(newWaterDisplay, weightDisplay);
+      }
+      
+      const waterDisplayElement = document.getElementById('waterDisplay');
+      waterDisplayElement.innerHTML = `
+        <div>🌊 <strong>Pourcentage d'eau</strong></div>
+        <div class="water-percentage">${(data.water_data.water_percentage || 0).toFixed(1)}%</div>
+        <div class="water-details">
+          <span>Poudre: <strong>${(data.water_data.powder_mass || 0).toFixed(1)} g</strong></span>
+          <span>Eau: <strong>${(data.water_data.water_mass || 0).toFixed(1)} g</strong></span>
+          <span>Total: <strong>${(data.water_data.current_mass || 0).toFixed(1)} g</strong></span>
+        </div>
+      `;
+      waterDisplayElement.style.display = 'block';
+    } else if (waterDisplay) {
+      waterDisplay.style.display = 'none';
+    }
+    
+    // Update history if provided
+    if (data.history && data.history.length > 0) {
+      historyList.innerHTML = data.history.map(item => 
+        `<li class="hist-item">
+          <span>${item.weight.toFixed(1)} g</span>
+          <span class="hist-time">${item.at}</span>
+        </li>`
+      ).join('');
+    }
+  } else {
+    weightDisplay.innerHTML = `
+      <div style="color:#b32222;font-weight:800;font-size:1.05rem">Aucune mesure</div>
+      <div class="small-note">Erreur de lecture du capteur.</div>
+    `;
+  }
+}
+
+// Show error message
+function showError(message) {
+  document.querySelectorAll('.flash.error').forEach(el => el.remove());
+  
+  const flashDiv = document.createElement('div');
+  flashDiv.className = 'flash error';
+  flashDiv.textContent = message;
+  
+  const controls = document.querySelector('.controls');
+  controls.insertAdjacentElement('afterend', flashDiv);
+  
+  setTimeout(() => flashDiv.remove(), 3000);
+}
+
+function togglePolling(btn){
+  if(pollInterval){
+    clearInterval(pollInterval); pollInterval = null;
+    btn.classList.remove('primary'); btn.classList.add('ghost'); btn.textContent = 'Auto‑poll';
+    btn.setAttribute('aria-pressed','false');
+    localStorage.removeItem('autoPoll');
+    return;
+  }
+  
+  btn.classList.remove('ghost'); btn.classList.add('primary'); btn.textContent = 'Stop';
+  btn.setAttribute('aria-pressed','true');
+  localStorage.setItem('autoPoll','1');
+  
+  pollInterval = setInterval(fetchWeightData, POLL_MS);
+}
+
+// Manual refresh button - also use AJAX
+document.querySelector('form[action="{{ url_for('weights') }}"] button').addEventListener('click', (e) => {
+  e.preventDefault();
+  fetchWeightData();
+});
+
+// restart auto-poll if it was enabled before a reload
+function initAutoPollOnLoad(){
+  try{
+    if(localStorage.getItem('autoPoll') === '1'){
+      const btn = document.getElementById('autoPollBtn');
+      if(btn && !pollInterval) togglePolling(btn);
+    }
+  }catch(e){}
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initAutoPollOnLoad);
+} else {
+  initAutoPollOnLoad();
+}
+
+/* improve hit area on touch for history items (optional) */
+document.getElementById('history')?.addEventListener('click', e=>{
+  const item = e.target.closest('.hist-item');
+  if(!item) return;
+  item.animate([{ transform:'scale(0.995)'},{ transform:'scale(1)'}], { duration:120 });
+});
+</script>
 {% endblock %}
