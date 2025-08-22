@@ -1,14 +1,57 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h2>Motor Control</h2>
-    <form method="post" action="{{ url_for('motor_control', profile='profile1') }}">
-        <button type="submit">Profile 1</button>
+<h2>Contrôle du moteur — Profils</h2>
+
+<div class="profiles-list" style="display:flex;flex-wrap:wrap;gap:16px;">
+  {% for name, steps in MOTOR_PROFILES.items() %}
+  <section class="profile-card" style="border:1px solid #ddd;padding:12px;border-radius:6px;width:320px;">
+    <h3 style="margin:0 0 8px 0;">{{ name }}</h3>
+
+    <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+      <thead>
+        <tr style="text-align:left;color:#444">
+          <th style="padding:4px 6px;border-bottom:1px solid #eee;width:24px">#</th>
+          <th style="padding:4px 6px;border-bottom:1px solid #eee">Fréquence (Hz)</th>
+          <th style="padding:4px 6px;border-bottom:1px solid #eee">Durée (s)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set ns = namespace(total=0) %}
+        {% for hz, sec in steps %}
+        <tr>
+          <td style="padding:6px;border-bottom:1px solid #fafafa">{{ loop.index }}</td>
+          <td style="padding:6px;border-bottom:1px solid #fafafa">{{ hz }}</td>
+          <td style="padding:6px;border-bottom:1px solid #fafafa">{{ sec }}</td>
+        </tr>
+        {% set ns.total = ns.total + sec %}
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td style="padding:6px;font-weight:bold">Total</td>
+          <td></td>
+          <td style="padding:6px;font-weight:bold">{{ ns.total }} s</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <form action="{{ url_for('motor_control') }}?profile={{ name }}" method="post" style="margin-top:10px;display:flex;gap:8px;align-items:center;">
+      <button type="submit" class="big_button" style="flex:0 0 auto;">Lancer le profil</button>
+      <a href="{{ url_for('profil_custom') }}" class="small_link" style="font-size:0.9rem;color:#007bff;text-decoration:none;">Créer / Éditer</a>
     </form>
-    <form method="post" action="{{ url_for('motor_control', profile='profile2') }}">
-        <button type="submit">Profile 2</button>
-    </form>
-    <form method="post" action="{{ url_for('motor_control', profile='profile3') }}">
-        <button type="submit">Profile 3</button>
-    </form>
+  </section>
+  {% endfor %}
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div style="margin-top:18px;">
+      {% for category, message in messages %}
+        <div class="flash {{ category }}" style="padding:8px;border-radius:4px;margin-bottom:6px;background:#fff8dc;border:1px solid #f0e6b6;">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 {% endblock %}
