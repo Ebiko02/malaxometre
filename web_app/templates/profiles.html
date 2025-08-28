@@ -1,57 +1,328 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>Contrôle du moteur — Profils</h2>
+<style>
+.profile-card {
+  border: 1px solid #ddd;
+  padding: 16px;
+  border-radius: 8px;
+  width: 340px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
 
-<div class="profiles-list" style="display:flex;flex-wrap:wrap;gap:16px;">
+.profile-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.profile-title {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.launch-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.launch-btn:hover {
+  background: #218838;
+  transform: scale(1.05);
+}
+
+.edit-btn {
+  background: #007bff;
+  color: white;
+  padding: 12px 24px;
+  text-decoration: none;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.edit-btn:hover {
+  background: #0056b3;
+  transform: scale(1.05);
+}
+
+.profile-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #007bff;
+}
+
+.stat-label {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.steps-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.steps-table th,
+.steps-table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.steps-table th {
+  background: #f8f9fa;
+  font-weight: bold;
+  border-bottom: 2px solid #ddd;
+}
+
+.steps-table tfoot td {
+  background: #f8f9fa;
+  font-weight: bold;
+  border-top: 2px solid #ddd;
+}
+
+.energy-display {
+  background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 8px;
+  font-weight: bold;
+  color: #2d3436;
+}
+
+.flash {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.flash.success {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.flash.error {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+/* Fix for footer overlap - add proper spacing */
+.profiles-container {
+  margin-bottom: 120px; /* Space for footer */
+  padding-bottom: 40px;  /* Additional padding */
+}
+
+/* Better mobile spacing */
+@media (max-width: 768px) {
+  .profiles-container {
+    margin-bottom: 150px; /* More space on mobile */
+  }
+}
+
+/* Calibration status styles */
+.calibration-status {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.status-good { color: #28a745; font-weight: bold; }
+.status-warning { color: #ffc107; font-weight: bold; }
+.status-error { color: #dc3545; font-weight: bold; }
+</style>
+
+<!-- Add this section at the top of your profiles template -->
+<div class="calibration-status" id="calibrationStatus">
+    <h3>🔧 Torque Compensation Status</h3>
+    <div id="calibrationInfo">
+        <p>Checking calibration data...</p>
+    </div>
+</div>
+
+<script>
+// Check calibration status when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/calibration_status')
+        .then(response => response.json())
+        .then(data => {
+            const statusDiv = document.getElementById('calibrationInfo');
+            if (data.available) {
+                statusDiv.innerHTML = `
+                    <p class="status-good">✅ Calibrated torque compensation available</p>
+                    <p>Calibration data for ${data.count} frequencies: ${data.frequencies.join(', ')} Hz</p>
+                    <p><em>All profiles will use intelligent load compensation automatically!</em></p>
+                `;
+            } else {
+                statusDiv.innerHTML = `
+                    <p class="status-warning">⚠️ ${data.message}</p>
+                    <p><em>Profiles will run with standard motor control.</em></p>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('calibrationInfo').innerHTML = 
+                `<p class="status-error">❌ Error checking calibration: ${error}</p>`;
+        });
+});
+</script>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <h2>⚡ Contrôle du moteur — Profils</h2>
+  <a href="{{ url_for('edit_profiles') }}" class="edit-btn">
+    ✏️ Éditer les profils
+  </a>
+</div>
+
+<div class="profiles-list profiles-container" style="display:flex;flex-wrap:wrap;gap:20px;">
   {% for name, steps in MOTOR_PROFILES.items() %}
-  <section class="profile-card" style="border:1px solid #ddd;padding:12px;border-radius:6px;width:320px;">
-    <h3 style="margin:0 0 8px 0;">{{ name }}</h3>
-
-    <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+  <section class="profile-card">
+    <div class="profile-header">
+      <h3 class="profile-title">🔧 {{ name }}</h3>
+      <form method="POST" action="{{ url_for('motor_control') }}">
+        <input type="hidden" name="profile" value="{{ name }}">
+        <button type="submit" class="launch-btn">
+          🚀 Lancer
+        </button>
+      </form>
+    </div>
+    
+    {% set ns = namespace(total_time=0, total_steps=0, max_freq=0) %}
+    {% for hz, sec in steps %}
+      {% set ns.total_time = ns.total_time + sec %}
+      {% set ns.total_steps = ns.total_steps + 1 %}
+      {% if hz > ns.max_freq %}
+        {% set ns.max_freq = hz %}
+      {% endif %}
+    {% endfor %}
+    
+    <!-- Profile Statistics -->
+    <div class="profile-stats">
+      <div class="stat-item">
+        <div class="stat-value">{{ ns.total_steps }}</div>
+        <div class="stat-label">Étapes</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ ns.total_time }}s</div>
+        <div class="stat-label">Durée totale</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">{{ ns.max_freq }}Hz</div>
+        <div class="stat-label">Fréq. max</div>
+      </div>
+    </div>
+    
+    <!-- Steps Table -->
+    <table class="steps-table">
       <thead>
-        <tr style="text-align:left;color:#444">
-          <th style="padding:4px 6px;border-bottom:1px solid #eee;width:24px">#</th>
-          <th style="padding:4px 6px;border-bottom:1px solid #eee">Fréquence (Hz)</th>
-          <th style="padding:4px 6px;border-bottom:1px solid #eee">Durée (s)</th>
+        <tr>
+          <th>#</th>
+          <th>Fréq (Hz)</th>
+          <th>Durée (s)</th>
         </tr>
       </thead>
       <tbody>
-        {% set ns = namespace(total=0) %}
         {% for hz, sec in steps %}
         <tr>
-          <td style="padding:6px;border-bottom:1px solid #fafafa">{{ loop.index }}</td>
-          <td style="padding:6px;border-bottom:1px solid #fafafa">{{ hz }}</td>
-          <td style="padding:6px;border-bottom:1px solid #fafafa">{{ sec }}</td>
+          <td>{{ loop.index }}</td>
+          <td>{{ hz }}</td>
+          <td>{{ sec }}</td>
         </tr>
-        {% set ns.total = ns.total + sec %}
         {% endfor %}
       </tbody>
-      <tfoot>
-        <tr>
-          <td style="padding:6px;font-weight:bold">Total</td>
-          <td></td>
-          <td style="padding:6px;font-weight:bold">{{ ns.total }} s</td>
-        </tr>
-      </tfoot>
     </table>
-
-    <form action="{{ url_for('motor_control') }}?profile={{ name }}" method="post" style="margin-top:10px;display:flex;gap:8px;align-items:center;">
-      <button type="submit" class="big_button" style="flex:0 0 auto;">Lancer le profil</button>
-      <a href="{{ url_for('profil_custom') }}" class="small_link" style="font-size:0.9rem;color:#007bff;text-decoration:none;">Créer / Éditer</a>
-    </form>
+    
   </section>
   {% endfor %}
 </div>
 
+<!-- Enhanced Flash Messages -->
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
-    <div style="margin-top:18px;">
+    <div style="margin-top: 24px; margin-bottom: 60px;">
       {% for category, message in messages %}
-        <div class="flash {{ category }}" style="padding:8px;border-radius:4px;margin-bottom:6px;background:#fff8dc;border:1px solid #f0e6b6;">{{ message }}</div>
+        <div class="flash {{ category }}">
+          {% if "Énergie utilisée" in message or "Energy used" in message %}
+            ⚡ {{ message }}
+          {% elif category == 'success' %}
+            ✅ {{ message }}
+          {% elif category == 'error' %}
+            ❌ {{ message }}
+          {% else %}
+            {{ message }}
+          {% endif %}
+        </div>
       {% endfor %}
     </div>
   {% endif %}
 {% endwith %}
+
+<script>
+// Add real-time energy calculation updates
+document.addEventListener('DOMContentLoaded', function() {
+  // Update energy estimates based on current motor parameters
+  updateEnergyEstimates();
+});
+
+function updateEnergyEstimates() {
+  // This could fetch real-time power consumption data
+  // For now, we'll use a simple estimation formula
+  
+  {% for name, steps in MOTOR_PROFILES.items() %}
+  const profileName = "{{ name.replace(' ', '_') }}";
+  const energyElement = document.getElementById(`energy-${profileName}`);
+  
+  if (energyElement) {
+    // Calculate estimated energy based on frequency and duration
+    let totalEnergy = 0;
+    {% for hz, sec in steps %}
+    // Power estimation: P = k * f^2 (where k is motor constant)
+    const power_{{ loop.index }} = {{ hz }} * {{ hz }} * 0.01 + {{ hz }} * 0.05; // Watts
+    totalEnergy += power_{{ loop.index }} * {{ sec }} / 3600; // Convert to Wh
+    {% endfor %}
+    
+    // Update energy display element
+    energyElement.textContent = totalEnergy.toFixed(2) + ' Wh';
+  }
+  {% endfor %}
+}
+</script>
 
 {% endblock %}
