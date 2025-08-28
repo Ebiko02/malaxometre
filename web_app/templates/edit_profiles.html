@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+/* Touch-friendly styles */
+.profiles-editor {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-size: 18px;
+}
+
+.profiles-editor h1 {
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #333;
+}
+
+.profile-section {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.profile-section h3 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #007bff;
+    border-bottom: 3px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.steps-container {
+    margin-bottom: 25px;
+}
+
+.step {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.step label {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #495057;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 150px;
+}
+
+.step input[type="number"] {
+    font-size: 1.3rem;
+    padding: 15px 20px;
+    border: 2px solid #ced4da;
+    border-radius: 8px;
+    width: 120px;
+    text-align: center;
+    background: white;
+    transition: all 0.2s;
+}
+
+.step input[type="number"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+    outline: none;
+}
+
+/* Big touch-friendly buttons */
+.btn {
+    font-size: 1.2rem;
+    padding: 15px 25px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    font-weight: bold;
+    min-width: 120px;
+    min-height: 50px;
+    line-height: 1.2;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-add {
+    background: #28a745;
+    color: white;
+    font-size: 1.3rem;
+    padding: 18px 30px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+}
+
+.btn-add:hover {
+    background: #218838;
+}
+
+.btn-remove {
+    background: #dc3545;
+    color: white;
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    margin-left: auto;
+}
+
+.btn-remove:hover {
+    background: #c82333;
+}
+
+.btn-save {
+    background: #007bff;
+    color: white;
+    font-size: 1.4rem;
+    padding: 20px 40px;
+    border-radius: 12px;
+    margin-right: 20px;
+}
+
+.btn-save:hover {
+    background: #0056b3;
+}
+
+.btn-cancel {
+    background: #6c757d;
+    color: white;
+    font-size: 1.4rem;
+    padding: 20px 40px;
+    border-radius: 12px;
+}
+
+.btn-cancel:hover {
+    background: #545b62;
+}
+
+.form-actions {
+    text-align: center;
+    margin-top: 40px;
+    padding: 30px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    border: 2px solid #e9ecef;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .step {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .step label {
+        min-width: auto;
+        text-align: center;
+    }
+    
+    .step input[type="number"] {
+        width: 100%;
+        max-width: 200px;
+        margin: 0 auto;
+    }
+    
+    .form-actions {
+        padding: 20px;
+    }
+    
+    .btn-save, .btn-cancel {
+        display: block;
+        width: 100%;
+        margin: 10px 0;
+    }
+}
+
+/* Add visual feedback for touch */
+.btn:focus {
+    outline: 3px solid rgba(0,123,255,0.5);
+    outline-offset: 2px;
+}
+
+.step {
+    position: relative;
+}
+
+.step::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #007bff, #28a745);
+    border-radius: 14px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: -1;
+}
+
+.step:hover::before {
+    opacity: 0.1;
+}
+</style>
+
+<div class="profiles-editor">
+    <h1>✏️ Éditer les Profils Moteur</h1>
+    
+    <form id="profilesForm">
+        {% for name, steps in profiles.items() %}
+        <div class="profile-section">
+            <h3>🔧 {{ name }}</h3>
+            <div class="steps-container" data-profile="{{ name }}">
+                {% for step in steps %}
+                <div class="step">
+                    <label>
+                        ⚡ Fréquence (Hz):
+                        <input type="number" name="{{ name }}_freq_{{ loop.index0 }}" 
+                               value="{{ step.frequency }}" min="0" max="50">
+                    </label>
+                    <label>
+                        ⏱️ Durée (secondes):
+                        <input type="number" name="{{ name }}_dur_{{ loop.index0 }}" 
+                               value="{{ step.duration }}" min="0" max="300">
+                    </label>
+                    <button type="button" class="btn btn-remove" onclick="removeStep(this)">
+                        🗑️ Supprimer
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-add" onclick="addStep('{{ name }}')">
+                ➕ Ajouter une étape
+            </button>
+        </div>
+        {% endfor %}
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-save">
+                💾 Sauvegarder les profils
+            </button>
+            <a href="{{ url_for('profiles') }}" class="btn btn-cancel">
+                ❌ Annuler
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+function addStep(profileName) {
+    const container = document.querySelector(`[data-profile="${profileName}"]`);
+    const stepCount = container.children.length;
+    
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'step';
+    stepDiv.innerHTML = `
+        <label>
+            ⚡ Fréquence (Hz):
+            <input type="number" name="${profileName}_freq_${stepCount}" 
+                   value="0" min="0" max="50">
+        </label>
+        <label>
+            ⏱️ Durée (secondes):
+            <input type="number" name="${profileName}_dur_${stepCount}" 
+                   value="0" min="0" max="300">
+        </label>
+        <button type="button" class="btn btn-remove" onclick="removeStep(this)">
+            🗑️ Supprimer
+        </button>
+    `;
+    
+    container.appendChild(stepDiv);
+    
+    // Add a small animation for the new step
+    stepDiv.style.opacity = '0';
+    stepDiv.style.transform = 'translateY(-20px)';
+    setTimeout(() => {
+        stepDiv.style.transition = 'all 0.3s ease';
+        stepDiv.style.opacity = '1';
+        stepDiv.style.transform = 'translateY(0)';
+    }, 10);
+}
+
+function removeStep(button) {
+    const step = button.parentElement;
+    
+    // Add removal animation
+    step.style.transition = 'all 0.3s ease';
+    step.style.opacity = '0';
+    step.style.transform = 'translateX(-100%)';
+    
+    setTimeout(() => {
+        step.remove();
+    }, 300);
+}
+
+document.getElementById('profilesForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // Show loading state
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '⏳ Sauvegarde en cours...';
+    submitBtn.disabled = true;
+    
+    // Collect form data and convert to JSON format
+    const formData = new FormData(e.target);
+    const profiles = {};
+    
+    // Process form data to reconstruct profiles
+    for (const [key, value] of formData.entries()) {
+        const match = key.match(/(.+)_(freq|dur)_(\d+)/);
+        if (match) {
+            const [, profileName, type, index] = match;
+            if (!profiles[profileName]) profiles[profileName] = [];
+            if (!profiles[profileName][index]) profiles[profileName][index] = {};
+            
+            profiles[profileName][index][type === 'freq' ? 'frequency' : 'duration'] = parseInt(value);
+        }
+    }
+    
+    try {
+        const response = await fetch('{{ url_for("edit_profiles") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profiles)
+        });
+        
+        if (response.ok) {
+            submitBtn.innerHTML = '✅ Sauvegardé !';
+            setTimeout(() => {
+                window.location.href = '{{ url_for("profiles") }}';
+            }, 1000);
+        } else {
+            throw new Error('Erreur serveur');
+        }
+    } catch (error) {
+        submitBtn.innerHTML = '❌ Erreur';
+        alert('Erreur lors de la sauvegarde: ' + error.message);
+        
+        // Restore button
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 2000);
+    }
+});
+
+// Add haptic feedback for mobile devices
+if ('vibrate' in navigator) {
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            navigator.vibrate(50); // 50ms vibration
+        });
+    });
+}
+</script>
+{% endblock %}
